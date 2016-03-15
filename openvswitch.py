@@ -18,7 +18,7 @@ import re
 import collectd
 from subprocess import Popen, PIPE
 
-
+#TODO: last_values should only keep 1 iteration
 last_values = {}
 
 def fetch_ovs_statistics():
@@ -38,7 +38,12 @@ def fetch_ovs_statistics():
             if line.find("@") != -1:
                 bridge = line.strip().replace(":", "")
                 data[bridge] = ovs_std_out[i+1].strip()
-        return struct_info(data)
+                flows_number = ovs_std_out[i+2].strip()
+                #TODO: can leave the loop at this place?
+        flows_number = flows_number.split(": ")[1]
+        all_vals = struct_info(data)
+        all_vals['flows'] = flows_number
+        return all_vals
 
     except (OSError, IOError) as exc:
         collectd.error("Error while running ovs-dpctl: %s" % exc)
@@ -49,6 +54,7 @@ def struct_info(lines):
     """
     struct = {}
     for line in lines:
+        #TODO: why?
         struct[line] = {}
         for d in re.split(":? ", lines[line], 3):
             if d.find(":") != -1:
@@ -79,17 +85,17 @@ def calculate_ratio(last, values):
 
 def dispatch_all_values(info):
     """
-    
+    Provides collectd with ready data.
     """
     global last_values
-    keys = ["hit", "missed", "lost"]
+    keys = ["hit", "missed", "lost", "flows"]
 
     for val in info:
         values = []
         cc = collectd.Values(plugin="openvswitch")
         cc.type_instance = val
 
-        cc.type = "openvswitch"
+        cc.type = "ovs_dp_overall"
         for key in keys:
             if (info[val].get(key) is not None):
                 values.append(info[val][key])
@@ -98,7 +104,7 @@ def dispatch_all_values(info):
         cc.values = values
         cc.dispatch()
 
-        cc.type = "openvswitch_ratio"
+        cc.type = "ovs_dp_ratio"
         cc.values = calculate_ratio(last_values.get(val), values)
         cc.dispatch()
 
