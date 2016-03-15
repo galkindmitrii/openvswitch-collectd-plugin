@@ -42,7 +42,7 @@ def fetch_ovs_statistics():
                 #TODO: can leave the loop at this place?
         flows_number = flows_number.split(": ")[1]
         all_vals = struct_info(data)
-        all_vals['flows'] = flows_number
+        all_vals['system@ovs-system']['flows'] = flows_number
         return all_vals
 
     except (OSError, IOError) as exc:
