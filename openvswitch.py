@@ -13,29 +13,40 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-#
-import collectd
-import re
 
+import re
+import collectd
 from subprocess import Popen, PIPE
+
 
 last_values = {}
 
-def ovs_fetch():
+def fetch_ovs_statistics():
+    """
+    Runs the Openvswitch Datapath Control utility to grab statistics.
+    """
     data = {}
     try:
-        p = Popen(["/usr/bin/ovs-dpctl", "show"], stdout=PIPE, close_fds=True)
-        output = p.stdout.readlines()
-        for i, line in enumerate(output):
+        ovs_dp_out = Popen(("/usr/bin/ovs-dpctl", "show"),
+                           stdout=PIPE,
+                           stderr=PIPE,
+                           close_fds=True)
+
+        ovs_std_out = ovs_dp_out.stdout.readlines()
+
+        for i, line in enumerate(ovs_std_out):
             if line.find("@") != -1:
                 bridge = line.strip().replace(":", "")
-                data[bridge] = output[i+1].strip()
+                data[bridge] = ovs_std_out[i+1].strip()
         return struct_info(data)
-    except OSError:
-        collectd.error("Failed to run ovs-dpctl")
-        return None
+
+    except (OSError, IOError) as exc:
+        collectd.error("Error while running ovs-dpctl: %s" % exc)
 
 def struct_info(lines):
+    """
+        
+    """
     struct = {}
     for line in lines:
         struct[line] = {}
@@ -46,6 +57,9 @@ def struct_info(lines):
     return struct
 
 def calculate_ratio(last, values):
+    """
+    
+    """
     d = []
     total = 0
     ratio_keys = ["hit_ratio", "missed_ratio", "lost_ratio"]
@@ -63,7 +77,10 @@ def calculate_ratio(last, values):
 
     return [0.00, 0.00, 0.00]
 
-def dispatch_all_value(info):
+def dispatch_all_values(info):
+    """
+    
+    """
     global last_values
     keys = ["hit", "missed", "lost"]
 
@@ -88,12 +105,15 @@ def dispatch_all_value(info):
         last_values[val] = values
 
 def read_callback():
-    data = ovs_fetch()
+    """
+    A callback method used by collectd.
+    """
+    data = fetch_ovs_statistics()
 
     if not data:
-        collectd.error("Failed to fetch OVS data")
+        collectd.error("Did not receive the OVS data")
         return None
 
-    dispatch_all_value(data)
+    dispatch_all_values(data)
 
 collectd.register_read(read_callback)
