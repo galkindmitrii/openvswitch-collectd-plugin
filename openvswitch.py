@@ -27,7 +27,7 @@ def fetch_ovs_statistics():
     """
     data = {}
     try:
-        ovs_dp_out = Popen(("/usr/bin/ovs-dpctl", "show"),
+        ovs_dp_out = Popen(("/usr/bin/ovs-dpctl", "show", "--timeout=5"),
                            stdout=PIPE,
                            stderr=PIPE,
                            close_fds=True)
