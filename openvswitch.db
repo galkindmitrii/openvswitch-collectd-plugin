@@ -1,2 +1,5 @@
 ovs_dp_overall hit:DERIVE:0:U, missed:DERIVE:0:U, lost:DERIVE:0:U, flows:DERIVE:0:U
-ovs_dp_ratio   hit_ratio:GAUGE:0:U, missed_ratio:GAUGE:0:U, lost_ratio:GAUGE:0:U
+ovs_dp_overall_ratio   hit_ratio:GAUGE:0:U, missed_ratio:GAUGE:0:U, lost_ratio:GAUGE:0:U
+ovs_cpu_usage real_use:GAUGE:0:U
+ovs_total_vxlans number:DERIVE:0:U
+ovs_running_vms number:DERIVE:0:U
