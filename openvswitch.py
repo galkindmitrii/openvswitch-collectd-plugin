@@ -48,13 +48,15 @@ def fetch_ovs_statistics():
     data = {}
     cmd = ("ovs-dpctl", "show", "--timeout=5")
 
-    for i, line in enumerate(get_ovs_ctl_stdout(cmd)):
+    ovs_stdout = get_ovs_ctl_stdout(cmd)
+
+    for i, line in enumerate(ovs_stdout):
         if line.find("@ovs-system") != -1:
             # TODO: find vs regex
             # TODO: a better parsing?
             bridge = line.strip().replace(":", "")
-            data[bridge] = ovs_std_out[i+1].strip()
-            flows_number = ovs_std_out[i+2].strip()
+            data[bridge] = ovs_stdout[i+1].strip()
+            flows_number = ovs_stdout[i+2].strip()
             break  # we run only 1 DP
 
     flows_number = flows_number.split(": ")[1]
