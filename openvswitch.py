@@ -23,13 +23,14 @@ from subprocess import Popen, PIPE
 last_values = {}
 
 
-def get_ovs_ctl_stdout(cmd):
+def get_ovs_ctl_stdout(cmd, stdin=None):
     """
     Using Popen, runs the given 'cmd' and returns its stdout.
     Logs stderr if any.
     """
     try:
-        ovs_out = Popen(cmd, stdout=PIPE, stderr=PIPE, close_fds=True)
+        ovs_out = Popen(cmd,
+                        stdout=PIPE, stderr=PIPE, stdin=stdin, close_fds=True)
 
         ovs_std_err = ovs_out.stderr.readlines()
         if ovs_std_err:
@@ -75,7 +76,7 @@ def get_ps_ovs_cpu_usage():
 
     try:
         with open("/var/run/openvswitch/ovs-vswitchd.pid", "r") as pid_file:
-            pid = pid_file.read()
+            pid = pid_file.read().strip()
 
         cmd = ("ps", "-p", pid, "-o" "%cpu")
         ps_out = Popen(cmd, stdout=PIPE, stderr=PIPE, close_fds=True)
@@ -84,7 +85,7 @@ def get_ps_ovs_cpu_usage():
         if std_err:
             collectd.info("ps wrote to stderr: %s" % std_err)
 
-        cpu_usage = float(ps_out.stdout.readlines())
+        cpu_usage = float(ps_out.stdout.readlines()[-1].strip())
 
     except (OSError, IOError, ValueError) as exc:
         collectd.error("An error occured while getting cpu usage: %s" % exc)
@@ -99,11 +100,13 @@ def get_num_of_vxlans():
     num_vxlans = 0
 
     # grep all vxlans on br-tun and count them:
-    cmd = ("ovs-ofctl", "show", "br-tun", "--timeout=5",
-           "|", "grep", "(vxlan-", "|", "wc", "-l")  #TODO: robust enough?
+    cmd = ("ovs-ofctl", "show", "br-tun", "--timeout=5")
     try:
-        num_vxlans = int(get_ovs_ctl_stdout(cmd))  # no extra line here
-    except ValueError as exc:
+        ovs_stdout = get_ovs_ctl_stdout(cmd)
+        grep_out = get_ovs_ctl_stdout(("grep", "(vxlan-"), ovs_stdout)
+        wc_out = get_ovs_ctl_stdout(("wc", "-l"), grep_out)
+        num_vxlans = int(wc_out)  # no extra line here
+    except TypeError as exc:
         collectd.error("An error occured while getting vxlan count: %s" % exc)
 
     return num_vxlans
@@ -117,17 +120,21 @@ def get_virsh_list_num_instances():
     num_instances = 0
 
     # cmd to list all running VM uuids and count their number (-1 line):
-    cmd = ("virsh", "list", "--uuid", "--state-running", "|", "wc", "-l")
+    cmd = ("virsh", "list", "--uuid", "--state-running")
     try:
         virsh_list_out = Popen(cmd, stdout=PIPE, stderr=PIPE, close_fds=True)
-        std_err = virsh_list_out.stderr.readlines()
 
+        std_err = virsh_list_out.stderr.readlines()
         if std_err:
             collectd.info("virsh wrote to stderr: %s" % std_err)
 
-        num_instances = int(virsh_list_out.stdout.readlines()) - 1  # empty
+        wc_out = Popen(("wc", "-l"),
+                       stdout=PIPE,
+                       stdin=virsh_list_out.stdout.strip(),
+                       close_fds=True)
+        num_instances = int(wc_out.stdout.readlines())
 
-    except (OSError, IOError, ValueError) as exc:
+    except (OSError, IOError, TypeError) as exc:
         collectd.error("An error occured while running virsh: %s" % exc)
 
     return num_instances
