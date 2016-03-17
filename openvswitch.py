@@ -11,21 +11,20 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import re
 import collectd
 from subprocess import Popen, PIPE
 
 
-#TODO: last_values should only keep 1 iteration
 last_values = {}
-
 
 def get_popen_cmd_stdout(cmd, stdin=None):
     """
-        
+    Executes the given cmd with stdin if any and returns the stdout.
+    Logs the stderr if any.
     """
     try:
         cmd_out = Popen(cmd,
@@ -59,7 +58,7 @@ def get_ovs_ctl_stdout(cmd, stdin=None):
         collectd.error("An error occured while running ovs-ctl: %s" % exc)
         return []
 
-def fetch_ovs_statistics():
+def get_ovs_statistics():
     """
     Runs the Openvswitch Datapath Control utility to grab statistics.
     """
@@ -118,10 +117,12 @@ def get_num_of_vxlans():
 
     # grep all vxlans on br-tun and count them:
     cmd = ("ovs-ofctl", "show", "br-tun", "--timeout=5")
+
+    ovs_stdout = get_popen_cmd_stdout(cmd)
+    grep_out = get_popen_cmd_stdout(("grep", "(vxlan-"), ovs_stdout)
+    wc_out = get_popen_cmd_stdout(("wc", "-l"), grep_out)
+
     try:
-        ovs_stdout = get_popen_cmd_stdout(cmd)
-        grep_out = get_popen_cmd_stdout(("grep", "(vxlan-"), ovs_stdout)
-        wc_out = get_popen_cmd_stdout(("wc", "-l"), grep_out)
         num_vxlans = int(wc_out.read())  # no extra line here
     except TypeError as exc:
         collectd.error("An error occured while getting vxlan count: %s" % exc)
@@ -173,7 +174,7 @@ def struct_info(lines):
 def calculate_ratio(last, values):
     """
     Calculates the current ratio between hit/miss/lost packets
-    based on given last values and new values. Returns ratios as percent.
+    based on given last values and new values. Returns ratios in percent.
     """
     d = []
     total = 0
@@ -217,6 +218,7 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
                 values.append(ovs_data[val][key])
             else:
                 values.append(0.00)
+
         dispatch_to_collectd("ovs_dp_overall", values)
 
         # OVS DP as percentage:
@@ -225,6 +227,7 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
 
         last_values[val] = values
 
+    # CPU use; number of VMs; VXLAN count:
     dispatch_to_collectd("ovs_cpu_usage", (cpu_usage,))
     dispatch_to_collectd("ovs_running_vms", (vms_running,))
     dispatch_to_collectd("ovs_total_vxlans", (vxlan_count,))
@@ -234,15 +237,15 @@ def read_openvswitch_stats():
     A callback method used by collectd.
     An entry point. Gets all the possible stats and sends them to collectd.
     """
-    ovs_data = fetch_ovs_statistics()  # OVS DP data
-    ovs_cpu_usage = get_ps_ovs_cpu_usage()  # ps %cpu for OVS
+    ovs_stats = get_ovs_statistics()  # OVS DataPath Stats
+    ovs_cpu_usage = get_ps_ovs_cpu_usage()  # ps -o %cpu for OVS
     vms_running = get_virsh_list_num_instances()  # libvirt VM count
     vxlan_count = get_num_of_vxlans()  # OVS OF vxlan count
 
-    if not ovs_data:
+    if not ovs_stats:
         collectd.error("Did not receive the OVS data")
         return None
 
-    send_data_to_collectd(ovs_data, ovs_cpu_usage, vms_running, vxlan_count)
+    send_data_to_collectd(ovs_stats, ovs_cpu_usage, vms_running, vxlan_count)
 
 collectd.register_read(read_openvswitch_stats)
