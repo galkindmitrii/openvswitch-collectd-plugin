@@ -23,6 +23,23 @@ from subprocess import Popen, PIPE
 last_values = {}
 
 
+def get_popen_cmd_stdout(cmd, stdin=None):
+    """
+        
+    """
+    try:
+        cmd_out = Popen(cmd,
+                        stdout=PIPE, stderr=PIPE, stdin=stdin, close_fds=True)
+
+        cmd_std_err = cmd_out.stderr.read()
+        if cmd_std_err:
+            collectd.info("ovs-ctl wrote to stderr: %s" % ovs_std_err)
+
+        return cmd_out.stdout
+
+    except (OSError, IOError) as exc:
+        collectd.error("An error occured while running %s cmd: %s" % (cmd, exc))
+
 def get_ovs_ctl_stdout(cmd, stdin=None):
     """
     Using Popen, runs the given 'cmd' and returns its stdout.
@@ -32,7 +49,7 @@ def get_ovs_ctl_stdout(cmd, stdin=None):
         ovs_out = Popen(cmd,
                         stdout=PIPE, stderr=PIPE, stdin=stdin, close_fds=True)
 
-        ovs_std_err = ovs_out.stderr.readlines()
+        ovs_std_err = ovs_out.stderr.read()
         if ovs_std_err:
             collectd.info("ovs-ctl wrote to stderr: %s" % ovs_std_err)
 
@@ -102,10 +119,10 @@ def get_num_of_vxlans():
     # grep all vxlans on br-tun and count them:
     cmd = ("ovs-ofctl", "show", "br-tun", "--timeout=5")
     try:
-        ovs_stdout = get_ovs_ctl_stdout(cmd)
-        grep_out = get_ovs_ctl_stdout(("grep", "(vxlan-"), ovs_stdout)
-        wc_out = get_ovs_ctl_stdout(("wc", "-l"), grep_out)
-        num_vxlans = int(wc_out)  # no extra line here
+        ovs_stdout = get_popen_cmd_stdout(cmd)
+        grep_out = get_popen_cmd_stdout(("grep", "(vxlan-"), ovs_stdout)
+        wc_out = get_popen_cmd_stdout(("wc", "-l"), grep_out)
+        num_vxlans = int(wc_out.read())  # no extra line here
     except TypeError as exc:
         collectd.error("An error occured while getting vxlan count: %s" % exc)
 
@@ -130,9 +147,9 @@ def get_virsh_list_num_instances():
 
         wc_out = Popen(("wc", "-l"),
                        stdout=PIPE,
-                       stdin=virsh_list_out.stdout.strip(),
+                       stdin=virsh_list_out.stdout,
                        close_fds=True)
-        num_instances = int(wc_out.stdout.readlines())
+        num_instances = int(wc_out.stdout.read())
 
     except (OSError, IOError, TypeError) as exc:
         collectd.error("An error occured while running virsh: %s" % exc)
