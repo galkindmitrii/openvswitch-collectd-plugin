@@ -198,7 +198,7 @@ def dispatch_to_collectd(data_type, values):
     Submits the given values of the given type to collectd.
     """
     cc = collectd.Values(plugin="openvswitch")
-    cc.type_instance = "system@ovs-system"  # TODO: needed with only 1 DP?
+    #cc.type_instance = "system@ovs-system"  # optional
     cc.type = data_type
     cc.values = values
     cc.dispatch()
@@ -243,7 +243,7 @@ def read_openvswitch_stats():
     vxlan_count = get_num_of_vxlans()  # OVS OF vxlan count
 
     if not ovs_stats:
-        collectd.error("Did not receive the OVS data")
+        collectd.error("Did not receive the main OVS stats")
         return None
 
     send_data_to_collectd(ovs_stats, ovs_cpu_usage, vms_running, vxlan_count)
