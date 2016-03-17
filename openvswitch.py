@@ -149,7 +149,7 @@ def get_virsh_list_num_instances():
                        stdout=PIPE,
                        stdin=virsh_list_out.stdout,
                        close_fds=True)
-        num_instances = int(wc_out.stdout.read())
+        num_instances = int(wc_out.stdout.read()) - 1  # an empty line
 
     except (OSError, IOError, TypeError) as exc:
         collectd.error("An error occured while running virsh: %s" % exc)
@@ -225,9 +225,9 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
 
         last_values[val] = values
 
-    dispatch_to_collectd("ovs_cpu_usage", cpu_usage)
-    dispatch_to_collectd("ovs_running_vms", vms_running)
-    dispatch_to_collectd("ovs_total_vxlans", vxlan_count)
+    dispatch_to_collectd("ovs_cpu_usage", (cpu_usage,))
+    dispatch_to_collectd("ovs_running_vms", (vms_running,))
+    dispatch_to_collectd("ovs_total_vxlans", (vxlan_count,))
 
 def read_openvswitch_stats():
     """
