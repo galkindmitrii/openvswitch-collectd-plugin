@@ -173,7 +173,7 @@ def struct_info(lines):
 def calculate_ratio(last, values):
     """
     Calculates the current ratio between hit/miss/lost packets
-    based on given last values and new values. Returns ration as percent.
+    based on given last values and new values. Returns ratios as percent.
     """
     d = []
     total = 0
@@ -220,8 +220,8 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
         dispatch_to_collectd("ovs_dp_overall", values)
 
         # OVS DP as percentage:
-        values = calculate_ratio(last_values.get(val), values)
-        dispatch_to_collectd("ovs_dp_overall_ratio", values)
+        ratio_values = calculate_ratio(last_values.get(val), values)
+        dispatch_to_collectd("ovs_dp_overall_ratio", ratio_values)
 
         last_values[val] = values
 
