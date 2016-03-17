@@ -32,7 +32,7 @@ def get_popen_cmd_stdout(cmd, stdin=None):
 
         cmd_std_err = cmd_out.stderr.read()
         if cmd_std_err:
-            collectd.info("ovs-ctl wrote to stderr: %s" % ovs_std_err)
+            collectd.info("%s wrote to stderr: %s" % (cmd, cmd_std_err))
 
         return cmd_out.stdout
 
