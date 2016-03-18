@@ -212,7 +212,7 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
                 values.append(0.00)
 
         dispatch_to_collectd("datapath", values)
-        dispatch_to_collectd("datapath_flows", ovs_data[val]["flows"])
+        dispatch_to_collectd("datapath_flows", (ovs_data[val]["flows"],))
 
         # OVS DP as percentage:
         ratio_values = calculate_ratio(last_values.get(val), values)
