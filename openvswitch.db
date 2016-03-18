@@ -1,5 +1,6 @@
-ovs_dp_overall hit:DERIVE:0:U, missed:DERIVE:0:U, lost:DERIVE:0:U, flows:DERIVE:0:U
-ovs_dp_overall_ratio   hit_ratio:GAUGE:0:U, missed_ratio:GAUGE:0:U, lost_ratio:GAUGE:0:U
-ovs_cpu_usage real_use:GAUGE:0:U
-ovs_total_vxlans number:DERIVE:0:U
-ovs_running_vms number:DERIVE:0:U
+datapath hit:ABSOLUTE:0:U missed:ABSOLUTE:0:U lost:ABSOLUTE:0:U
+datapath_flows flows:ABSOLUTE:0:U
+datapath_ratio hit_ratio:GAUGE:0:U missed_ratio:GAUGE:0:U lost_ratio:GAUGE:0:U
+cpu_usage real_use:GAUGE:0:U
+total_vxlans vxlans:COUNTER:0:U
+running_vms vms:COUNTER:0:U

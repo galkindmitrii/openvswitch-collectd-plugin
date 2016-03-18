@@ -139,20 +139,12 @@ def get_virsh_list_num_instances():
 
     # cmd to list all running VM uuids and count their number (-1 line):
     cmd = ("virsh", "list", "--uuid", "--state-running")
+    virsh_list_out = get_popen_cmd_stdout(cmd)
+    wc_out = get_popen_cmd_stdout(("wc", "-l"), virsh_list_out)
+
     try:
-        virsh_list_out = Popen(cmd, stdout=PIPE, stderr=PIPE, close_fds=True)
-
-        std_err = virsh_list_out.stderr.readlines()
-        if std_err:
-            collectd.info("virsh wrote to stderr: %s" % std_err)
-
-        wc_out = Popen(("wc", "-l"),
-                       stdout=PIPE,
-                       stdin=virsh_list_out.stdout,
-                       close_fds=True)
         num_instances = int(wc_out.stdout.read()) - 1  # an empty line
-
-    except (OSError, IOError, TypeError) as exc:
+    except TypeError as exc:
         collectd.error("An error occured while running virsh: %s" % exc)
 
     return num_instances
@@ -208,7 +200,7 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
     Sends all acquired statistics to collectd.
     """
     global last_values
-    keys = ["hit", "missed", "lost", "flows"]
+    keys = ["hit", "missed", "lost"]
 
     for val in ovs_data:
         values = []
@@ -219,18 +211,19 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
             else:
                 values.append(0.00)
 
-        dispatch_to_collectd("ovs_dp_overall", values)
+        dispatch_to_collectd("datapath", values)
+        dispatch_to_collectd("datapath_flows", ovs_data[val]["flows"])
 
         # OVS DP as percentage:
         ratio_values = calculate_ratio(last_values.get(val), values)
-        dispatch_to_collectd("ovs_dp_overall_ratio", ratio_values)
+        dispatch_to_collectd("datapath_ratio", ratio_values)
 
         last_values[val] = values
 
     # CPU use; number of VMs; VXLAN count:
-    dispatch_to_collectd("ovs_cpu_usage", (cpu_usage,))
-    dispatch_to_collectd("ovs_running_vms", (vms_running,))
-    dispatch_to_collectd("ovs_total_vxlans", (vxlan_count,))
+    dispatch_to_collectd("cpu_usage", (cpu_usage,))
+    dispatch_to_collectd("running_vms", (vms_running,))
+    dispatch_to_collectd("total_vxlans", (vxlan_count,))
 
 def read_openvswitch_stats():
     """
