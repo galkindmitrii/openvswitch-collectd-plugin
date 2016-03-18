@@ -38,25 +38,14 @@ def get_popen_cmd_stdout(cmd, stdin=None):
 
     except (OSError, IOError) as exc:
         collectd.error("An error occured while running %s cmd: %s" % (cmd, exc))
+        #TODO: handle further
 
 def get_ovs_ctl_stdout(cmd, stdin=None):
     """
     Using Popen, runs the given 'cmd' and returns its stdout.
-    Logs stderr if any.
     """
-    try:
-        ovs_out = Popen(cmd,
-                        stdout=PIPE, stderr=PIPE, stdin=stdin, close_fds=True)
-
-        ovs_std_err = ovs_out.stderr.read()
-        if ovs_std_err:
-            collectd.info("ovs-ctl wrote to stderr: %s" % ovs_std_err)
-
-        return ovs_out.stdout.readlines()
-
-    except (OSError, IOError) as exc:
-        collectd.error("An error occured while running ovs-ctl: %s" % exc)
-        return []
+    cmd_stdout = get_popen_cmd_stdout(cmd, stdin)
+    return cmd_stdout.readlines()
 
 def get_ovs_statistics():
     """
@@ -170,7 +159,7 @@ def calculate_ratio(last, values):
     """
     d = []
     total = 0
-    ratio_keys = ["hit_ratio", "missed_ratio", "lost_ratio"]
+    ratio_keys = ["hit", "missed", "lost"]
 
     if (last):
         for i in range(len(ratio_keys)):
