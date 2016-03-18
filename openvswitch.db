@@ -1,6 +1,6 @@
 datapath hit:ABSOLUTE:0:U missed:ABSOLUTE:0:U lost:ABSOLUTE:0:U
 datapath_flows flows:ABSOLUTE:0:U
-datapath_ratio hit_ratio:GAUGE:0:U missed_ratio:GAUGE:0:U lost_ratio:GAUGE:0:U
+datapath_ratio hit_ratio:GAUGE:0:100 missed_ratio:GAUGE:0:100 lost_ratio:GAUGE:0:100
 cpu_usage real_use:GAUGE:0:U
-total_vxlans vxlans:COUNTER:0:U
-running_vms vms:COUNTER:0:U
+total_vxlans vxlans:ABSOLUTE:0:U
+running_vms vms:ABSOLUTE:0:U
