@@ -143,7 +143,7 @@ def get_virsh_list_num_instances():
     wc_out = get_popen_cmd_stdout(("wc", "-l"), virsh_list_out)
 
     try:
-        num_instances = int(wc_out.stdout.read()) - 1  # an empty line
+        num_instances = int(wc_out.read()) - 1  # an empty line
     except TypeError as exc:
         collectd.error("An error occured while running virsh: %s" % exc)
 
