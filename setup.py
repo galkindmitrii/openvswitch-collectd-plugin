@@ -1,12 +1,12 @@
 from distutils.core import setup
 
 setup(name='openvswitch-plugin-collectd',
-      version='0.1.1',
+      version='0.1.2',
       description='OpenVSwitch plugin for Collectd',
       author='Luiz Ozaki',
       author_email='luiz.ozaki@locaweb.com.br',
-      url='https://github.com/LuizOz/openvswitch-collectd-plugin',
-      data_files=[('/etc/collectd/collectd.conf.d/', ['openvswitch.conf']),
-                  ('/etc/collectd/', ['openvswitch.db']),
-                  ('/usr/lib/collectd/', ['openvswitch.py'])]
+      url='https://github.com/galkindmitrii/openvswitch-collectd-plugin',
+      data_files=[('/etc/collectd.d/', ['openvswitch.conf']),
+                  ('/etc/collectd.d/', ['openvswitch.db']),
+                  ('/usr/lib64/collectd/', ['openvswitch.py'])]
      )
