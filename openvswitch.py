@@ -19,7 +19,20 @@ import collectd
 from subprocess import Popen, PIPE
 
 
+is_network_node = False
 last_values = {}
+
+def determine_node_role():
+    """
+    Runs virsh list as a simple check if that's a compute or network node.
+    """
+    cmd = Popen(("virsh", "list"),
+                stdout=PIPE, stderr=PIPE, close_fds=True)
+    cmd.communicate()
+
+    if cmd.returncode != 0:
+        global is_network_node
+        is_network_node = True
 
 def get_popen_cmd_stdout(cmd, stdin=None):
     """
@@ -118,13 +131,15 @@ def get_num_of_vxlans():
 
     return num_vxlans
 
-# TODO: this should not be executed on the Network Nodes!
 def get_virsh_list_num_instances():
     """
     Returns the number of VMs running on current host as reported by
     'virsh list --uuid --state-running'
     """
     num_instances = 0
+
+    if is_network_node:  # return 0
+        return num_instances
 
     # cmd to list all running VM uuids and count their number (-1 line):
     cmd = ("virsh", "list", "--uuid", "--state-running")
@@ -230,4 +245,5 @@ def read_openvswitch_stats():
 
     send_data_to_collectd(ovs_stats, ovs_cpu_usage, vms_running, vxlan_count)
 
+determine_node_role()
 collectd.register_read(read_openvswitch_stats)
