@@ -241,6 +241,7 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
                 values.append(0.00)
 
         dispatch_to_collectd("datapath", values)
+        ovs_data[val]["flows"] = int(ovs_data[val]["flows"]) * 10  #FIXME: workaround grafana
         dispatch_to_collectd("datapath_flows", (ovs_data[val]["flows"],))
 
         # OVS DP as percentage:
@@ -269,6 +270,9 @@ def read_openvswitch_stats():
     ovs_cpu_usage = get_ps_ovs_cpu_usage()  # ps -o %cpu for OVS
     vms_running = get_virsh_list_num_instances()  # libvirt VM count
     vxlan_count = get_num_of_vxlans()  # OVS OF vxlan count
+
+    vms_running *= 10  #FIXME: workaround grafana
+    vxlan_count *= 10  #FIXME: workaround grafana
 
     if not ovs_stats:
         collectd.error("Did not receive the main OVS stats")
