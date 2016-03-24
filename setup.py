@@ -6,7 +6,7 @@ setup(name='openvswitch-plugin-collectd',
       author='Luiz Ozaki',
       author_email='luiz.ozaki@locaweb.com.br',
       url='https://github.com/galkindmitrii/openvswitch-collectd-plugin',
-      data_files=[('/etc/collectd.d/', ['openvswitch.conf']),
-                  ('/etc/collectd.d/', ['openvswitch.db']),
+      data_files=[('/etc/collectd.d/',
+                   ['openvswitch.conf', 'openvswitch.db', 'graphite.conf']),
                   ('/usr/lib64/collectd/', ['openvswitch.py'])]
      )
