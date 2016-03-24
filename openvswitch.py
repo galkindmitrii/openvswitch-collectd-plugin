@@ -219,7 +219,7 @@ def calculate_avg_packet_rate(current_vals):
         pkg_rates = []
         for cnt in xrange(len(current_vals)):
             diff = current_vals[cnt] - last_values['system@ovs-system'][cnt]
-            pkg_rates.append(diff / 10)
+            pkg_rates.append(diff / 10)  #FIXME: hardcode, collectd sample rate
         return pkg_rates
     else:
         return [0,0,0]
