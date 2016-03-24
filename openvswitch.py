@@ -26,11 +26,11 @@ def determine_node_role():
     """
     Runs virsh list as a simple check if that's a compute or network node.
     """
-    cmd = Popen(("virsh", "list"),
-                stdout=PIPE, stderr=PIPE, close_fds=True)
-    cmd.communicate()
-
-    if cmd.returncode != 0:
+    try:
+        cmd = Popen(("virsh", "list"),
+                    stdout=PIPE, stderr=PIPE, close_fds=True)
+        cmd.communicate()
+    except OSError:
         global is_network_node
         is_network_node = True
 
@@ -226,8 +226,11 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
 
     # CPU use; number of VMs; VXLAN count:
     dispatch_to_collectd("cpu_usage", (cpu_usage,))
-    dispatch_to_collectd("running_vms", (vms_running,))
     dispatch_to_collectd("total_vxlans", (vxlan_count,))
+
+    if not is_network_node:
+        # compute node -> report amount of VMs
+        dispatch_to_collectd("running_vms", (vms_running,))
 
 def read_openvswitch_stats():
     """
