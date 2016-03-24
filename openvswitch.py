@@ -215,11 +215,14 @@ def calculate_avg_packet_rate(current_vals):
     #hit/miss/lost since last time data was collected.
     """
     # hit / miss / lost
-    pkg_rates = []
-    for cnt in xrange(len(current_vals)):
-        diff = int(current_vals[cnt] - last_values['system@ovs-system'][cnt])
-        pkg_rates.append(diff / 10)
-    return pkg_rates
+    if last_values:
+        pkg_rates = []
+        for cnt in xrange(len(current_vals)):
+            diff = current_vals[cnt] - last_values['system@ovs-system'][cnt]
+            pkg_rates.append(diff / 10)
+        return pkg_rates
+    else:
+        return [0,0,0]
 
 def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
     """
@@ -244,9 +247,9 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
         ratio_values = calculate_ratio(last_values.get(val), values)
         dispatch_to_collectd("datapath_ratio", ratio_values)
 
-        last_values[val] = values
         avg_pks_per_sec = calculate_avg_packet_rate(values)
         dispatch_to_collectd("datapath_rates", avg_pks_per_sec)
+        last_values[val] = values
 
     # CPU use; number of VMs; VXLAN count:
     dispatch_to_collectd("cpu_usage", (cpu_usage,))
