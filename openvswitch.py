@@ -274,5 +274,5 @@ def read_openvswitch_stats():
     send_data_to_collectd(ovs_stats, ovs_cpu_usage, vms_running, vxlan_count)
 
 
-determine_node_role()
+collectd.register_init(determine_node_role)
 collectd.register_read(read_openvswitch_stats)
