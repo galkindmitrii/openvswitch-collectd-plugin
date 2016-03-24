@@ -14,15 +14,16 @@ numbers and percent ratios).
 Install
 -------
 
-Run python setup.py install.
+Execute 'python setup.py install'
 
-Setup assumes, that:
-Collectd plugins folder is /usr/lib64/collectd/
-Collectd.d folder is /etc/collectd.d/
+Setup.py assumes, that:
 
-If not, you'll have to either copy the files manually or tweak the setup.py
+ - Collectd plugins folder is /usr/lib64/collectd/
+ - Collectd.d folder is /etc/collectd.d/
 
-It's using a [custom TypesDB](https://collectd.org/documentation/manpages/types.db.5.shtml#custom_types) to save these metrics.
+If that isn' the case, you'll have to either copy the files manually or adjust the setup.py
+
+Plugin is using a [custom TypesDB](https://collectd.org/documentation/manpages/types.db.5.shtml#custom_types) to save metrics.
 If you don't specify the default TypesDB + the plugin TypesDB file, its not going to work.
 
 You can either edit the default TypesDB file and add the openvswitch.db line or specify the openvswitch.db file directly.
