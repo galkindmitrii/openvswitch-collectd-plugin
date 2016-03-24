@@ -34,6 +34,7 @@ def determine_node_role():
         global is_network_node
         is_network_node = True
 
+
 def get_popen_cmd_stdout(cmd, stdin=None):
     """
     Executes the given cmd with stdin if any and returns the stdout.
@@ -53,12 +54,14 @@ def get_popen_cmd_stdout(cmd, stdin=None):
         collectd.error("An error occured while running %s cmd: %s" % (cmd, exc))
         #TODO: handle further
 
+
 def get_ovs_ctl_stdout(cmd, stdin=None):
     """
     Using Popen, runs the given 'cmd' and returns its stdout.
     """
     cmd_stdout = get_popen_cmd_stdout(cmd, stdin)
     return cmd_stdout.readlines()
+
 
 def get_ovs_statistics():
     """
@@ -83,6 +86,7 @@ def get_ovs_statistics():
     all_vals['system@ovs-system']['flows'] = flows_number
 
     return all_vals
+
 
 def get_ps_ovs_cpu_usage():
     """
@@ -110,6 +114,7 @@ def get_ps_ovs_cpu_usage():
 
     return cpu_usage
 
+
 def get_num_of_vxlans():
     """
     Returns a number of vxlan tunnels as reported by ovs-ofctl;
@@ -130,6 +135,7 @@ def get_num_of_vxlans():
         collectd.error("An error occured while getting vxlan count: %s" % exc)
 
     return num_vxlans
+
 
 def get_virsh_list_num_instances():
     """
@@ -153,6 +159,7 @@ def get_virsh_list_num_instances():
 
     return num_instances
 
+
 def struct_info(lines):
     """
     Returns a parced data from given lines.
@@ -166,6 +173,7 @@ def struct_info(lines):
                 stats = d.split(":")
                 struct[line][stats[0]] = float(stats[1])
     return struct
+
 
 def calculate_ratio(last, values):
     """
@@ -189,6 +197,7 @@ def calculate_ratio(last, values):
 
     return [0.00, 0.00, 0.00]
 
+
 def dispatch_to_collectd(data_type, values):
     """
     Submits the given values of the given type to collectd.
@@ -198,6 +207,19 @@ def dispatch_to_collectd(data_type, values):
     cc.type = data_type
     cc.values = values
     cc.dispatch()
+
+
+def calculate_avg_packet_rate(current_vals):
+    """
+    Returns list with avgerage packet rates
+    #hit/miss/lost since last time data was collected.
+    """
+    # hit / miss / lost
+    pkg_rates = []
+    for cnt in xrange(len(current_vals)):
+        diff = int(current_vals[cnt] - last_values['system@ovs-system'][cnt])
+        pkg_rates.append(diff / 10)
+    return pkg_rates
 
 def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
     """
@@ -223,6 +245,8 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
         dispatch_to_collectd("datapath_ratio", ratio_values)
 
         last_values[val] = values
+        avg_pks_per_sec = calculate_avg_packet_rate(values)
+        dispatch_to_collectd("datapath_rates", avg_pks_per_sec)
 
     # CPU use; number of VMs; VXLAN count:
     dispatch_to_collectd("cpu_usage", (cpu_usage,))
@@ -232,10 +256,11 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
         # compute node -> report amount of VMs
         dispatch_to_collectd("running_vms", (vms_running,))
 
+
 def read_openvswitch_stats():
     """
     A callback method used by collectd.
-    An entry point. Gets all the possible stats and sends them to collectd.
+    An entry point. Gets available stats and sends them to collectd.
     """
     ovs_stats = get_ovs_statistics()  # OVS DataPath Stats
     ovs_cpu_usage = get_ps_ovs_cpu_usage()  # ps -o %cpu for OVS
@@ -247,6 +272,7 @@ def read_openvswitch_stats():
         return None
 
     send_data_to_collectd(ovs_stats, ovs_cpu_usage, vms_running, vxlan_count)
+
 
 determine_node_role()
 collectd.register_read(read_openvswitch_stats)
