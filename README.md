@@ -6,7 +6,7 @@ OpenVSwitch plugin for Collectd
 A simple OpenVSwitch plugin made for Collectd.
 
 - Collects the hit, miss and lost stats from the OpenVSwitch DataPath (Both
-numbers and percent ratios).
+numbers and percent ratios as well as average packet per second rate).
 - Collects number of active VXLANs
 - Collects number of running VMs (in case run on Compute node)
 - Collects the CPU usage of Openvswitch (user-space) service
@@ -36,3 +36,12 @@ Compatibility
 2. Uses 'virsh' to get the list of running instances (on Compute nodes only).
 
 3. collectd-python is needed for plugin to work ('pip install collectd').
+
+Otherwise tested with collectd==5.5.1 and collectd-python==1.0.
+
+TODO
+-------------------------
+
+1. Currently has some fixes for grafana for it to show the stats correctly.
+
+2. The code should be preferably refactored/optimized further.
