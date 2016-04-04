@@ -19,8 +19,8 @@ import collectd
 from subprocess import Popen, PIPE
 
 
-is_network_node = False
-last_values = {}
+is_network_node = False  # assume we're on Compute node
+last_values = {}  # stores vals from last check to calculate 'relative' stats
 
 def determine_node_role():
     """
@@ -31,6 +31,8 @@ def determine_node_role():
                     stdout=PIPE, stderr=PIPE, close_fds=True)
         cmd.communicate()
     except OSError:
+        # either libvirt-client pkg not installed (unlikely)
+        # or that is not a compute host (a network node in our case):
         global is_network_node
         is_network_node = True
 
@@ -52,12 +54,11 @@ def get_popen_cmd_stdout(cmd, stdin=None):
 
     except (OSError, IOError) as exc:
         collectd.error("An error occured while running %s cmd: %s" % (cmd, exc))
-        #TODO: handle further
 
 
-def get_ovs_ctl_stdout(cmd, stdin=None):
+def read_ovs_ctl_stdout(cmd, stdin=None):
     """
-    Using Popen, runs the given 'cmd' and returns its stdout.
+    Using Popen, runs the given 'cmd' and returns its stdout lines.
     """
     cmd_stdout = get_popen_cmd_stdout(cmd, stdin)
     return cmd_stdout.readlines()
@@ -70,7 +71,7 @@ def get_ovs_statistics():
     data = {}
     cmd = ("ovs-dpctl", "show", "--timeout=5")
 
-    ovs_stdout = get_ovs_ctl_stdout(cmd)
+    ovs_stdout = read_ovs_ctl_stdout(cmd)
 
     for i, line in enumerate(ovs_stdout):
         if line.find("@ovs-system") != -1:
@@ -83,6 +84,8 @@ def get_ovs_statistics():
 
     flows_number = flows_number.split(": ")[1]
     all_vals = struct_info(data)
+
+    # system@ovs-system is the default name for DP in OVS:
     all_vals['system@ovs-system']['flows'] = flows_number
 
     return all_vals
@@ -131,7 +134,7 @@ def get_num_of_vxlans():
 
     try:
         num_vxlans = int(wc_out.read())  # no extra line here
-    except TypeError as exc:
+    except (TypeError, ValueError) as exc:
         collectd.error("An error occured while getting vxlan count: %s" % exc)
 
     return num_vxlans
@@ -153,8 +156,8 @@ def get_virsh_list_num_instances():
     wc_out = get_popen_cmd_stdout(("wc", "-l"), virsh_list_out)
 
     try:
-        num_instances = int(wc_out.read()) - 1  # an empty line
-    except TypeError as exc:
+        num_instances = int(wc_out.read()) - 1  # minus an empty line
+    except (TypeError, ValueError) as exc:
         collectd.error("An error occured while running virsh: %s" % exc)
 
     return num_instances
@@ -168,9 +171,9 @@ def struct_info(lines):
     for line in lines:
         #TODO: why?
         struct[line] = {}
-        for d in re.split(":? ", lines[line], 3):
-            if d.find(":") != -1:
-                stats = d.split(":")
+        for stat in re.split(":? ", lines[line], 3):
+            if stat.find(":") != -1:
+                stats = stat.split(":")
                 struct[line][stats[0]] = float(stats[1])
     return struct
 
@@ -180,20 +183,20 @@ def calculate_ratio(last, values):
     Calculates the current ratio between hit/miss/lost packets
     based on given last values and new values. Returns ratios in percent.
     """
-    d = []
+    ratios = []
     total = 0
     ratio_keys = ["hit", "missed", "lost"]
 
-    if (last):
+    if last:
         for i in range(len(ratio_keys)):
-            if (values[i] and last[i]):
-                d.append(values[i] - last[i])
+            if values[i] and last[i]:
+                ratios.append(values[i] - last[i])
                 total += (values[i] - last[i])
             else:
-                d.append(0.00)
+                ratios.append(0.00)
 
-        if (total != 0):
-            return [(d[i]/total)*100 for i, key in enumerate(ratio_keys)]
+        if total != 0:
+            return [(ratios[i]/total)*100 for i, _ in enumerate(ratio_keys)]
 
     return [0.00, 0.00, 0.00]
 
@@ -202,17 +205,18 @@ def dispatch_to_collectd(data_type, values):
     """
     Submits the given values of the given type to collectd.
     """
-    cc = collectd.Values(plugin="openvswitch")
-    #cc.type_instance = "system@ovs-system"  # optional
-    cc.type = data_type
-    cc.values = values
-    cc.dispatch()
+    collect = collectd.Values(plugin="openvswitch")
+    #collect.type_instance = "system@ovs-system"  # optional
+    collect.type = data_type
+    collect.values = values
+    collect.dispatch()
 
 
 def calculate_avg_packet_rate(current_vals):
     """
     Returns list with avgerage packet rates
     #hit/miss/lost since last time data was collected.
+    WARNING: assuming default collectd sampling rate: 10 secs.
     """
     # hit / miss / lost
     if last_values:
@@ -222,18 +226,17 @@ def calculate_avg_packet_rate(current_vals):
             pkg_rates.append(diff / 10)  #FIXME: hardcode, collectd sample rate
         return pkg_rates
     else:
-        return [0,0,0]
+        return [0, 0, 0]
 
 def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
     """
     Sends all acquired statistics to collectd.
     """
-    global last_values
     keys = ["hit", "missed", "lost"]
 
     for val in ovs_data:
         values = []
-        # OVS DP (hit/miss/loss/flows):
+        # OVS DP (hit/miss/loss/flows numbers):
         for key in keys:
             if (ovs_data[val].get(key) is not None):
                 values.append(ovs_data[val][key])
@@ -248,6 +251,8 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
         ratio_values = calculate_ratio(last_values.get(val), values)
         dispatch_to_collectd("datapath_ratio", ratio_values)
 
+        # The avg. pps rate hit/miss/loss
+        # NOTE: no need to *10 for grafana as we have int here.
         avg_pks_per_sec = calculate_avg_packet_rate(values)
         dispatch_to_collectd("datapath_rates", avg_pks_per_sec)
         last_values[val] = values
@@ -257,7 +262,7 @@ def send_data_to_collectd(ovs_data, cpu_usage, vms_running, vxlan_count):
     dispatch_to_collectd("total_vxlans", (vxlan_count,))
 
     if not is_network_node:
-        # compute node -> report amount of VMs
+        # if run on a compute node -> report amount of VMs
         dispatch_to_collectd("running_vms", (vms_running,))
 
 
@@ -267,9 +272,9 @@ def read_openvswitch_stats():
     An entry point. Gets available stats and sends them to collectd.
     """
     ovs_stats = get_ovs_statistics()  # OVS DataPath Stats
-    ovs_cpu_usage = get_ps_ovs_cpu_usage()  # ps -o %cpu for OVS
-    vms_running = get_virsh_list_num_instances()  # libvirt VM count
-    vxlan_count = get_num_of_vxlans()  # OVS OF vxlan count
+    ovs_cpu_usage = get_ps_ovs_cpu_usage()  # ps -o %cpu for OVS service
+    vms_running = get_virsh_list_num_instances()  # libvirt reported VM count
+    vxlan_count = get_num_of_vxlans()  # OVS vxlan count
 
     vms_running *= 10  #FIXME: workaround grafana
     vxlan_count *= 10  #FIXME: workaround grafana
@@ -281,5 +286,8 @@ def read_openvswitch_stats():
     send_data_to_collectd(ovs_stats, ovs_cpu_usage, vms_running, vxlan_count)
 
 
+# determine current node role (Compute or Network)
 collectd.register_init(determine_node_role)
+
+# and do OVS monitoring with collectd
 collectd.register_read(read_openvswitch_stats)
