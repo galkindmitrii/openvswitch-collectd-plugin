@@ -38,10 +38,3 @@ Compatibility
 3. collectd-python is needed for plugin to work ('pip install collectd').
 
 Otherwise tested with collectd==5.5.1 and collectd-python==1.0.
-
-TODO
--------------------------
-
-1. Currently has some fixes for grafana for it to show the stats correctly.
-
-2. The code should be preferably refactored/optimized further.
