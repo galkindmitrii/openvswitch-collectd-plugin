@@ -6,15 +6,21 @@ OpenVSwitch plugin for Collectd
 A simple OpenVSwitch plugin made for Collectd.
 
 - Collects the hit, miss and lost stats from the OpenVSwitch DataPath (Both
-numbers and percent ratios as well as average packet per second rate).
-- Collects number of active VXLANs
-- Collects number of running VMs (in case run on Compute node)
-- Collects the CPU usage of Openvswitch (user-space) service
+numbers and percent ratios as well as average packet per second rate);
+- Collects number of active VXLANs;
+- Collects number of running VMs (in case run on Compute node);
+- Collects the CPU usage of Openvswitch (user-space) service/
+
+This plugin was designed to be used in Openstack with Neutron managing OVS.
+
 
 Install
 -------
 
 Execute 'python setup.py install'
+
+Can be installed either onto Openstack Nova Compute or Neutron Network nodes and
+was tested with Liberty and Mitaka releases and OVS 2.4.0 on Centos 7.2
 
 Setup.py assumes, that:
 
@@ -28,6 +34,7 @@ If you don't specify the default TypesDB + the plugin TypesDB file, it's not goi
 
 You can either edit the default TypesDB file and add the openvswitch.db line or specify the openvswitch.db file directly.
 
+
 Compatibility
 -------------------------
 
@@ -36,5 +43,3 @@ Compatibility
 2. Uses 'virsh' to get the list of running instances (on Compute nodes only).
 
 3. collectd-python is needed for plugin to work ('pip install collectd').
-
-Otherwise tested with collectd==5.5.1 and collectd-python==1.0.
